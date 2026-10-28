@@ -1,5 +1,5 @@
 streamlit
-pymupdf
+pypdf
 python-dotenv
 google-genai
 python-docx

@@ -4,6 +4,7 @@
 import json
 import os
 
+import streamlit as st
 from dotenv import load_dotenv
 from google import genai
 
@@ -68,22 +69,34 @@ def compare_documents(text_a, text_b):
     if not isinstance(text_b, str) or not text_b.strip():
         raise ValueError("Document B contains no readable text.")
 
+    # Read the API key from the local .env file or Streamlit Cloud Secrets.
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or not api_key.strip():
+
+    if not api_key:
+        try:
+            api_key = st.secrets.get("GEMINI_API_KEY")
+        except Exception:
+            api_key = None
+
+    if not api_key:
         raise ValueError(
-            "Gemini API key is missing. Add GEMINI_API_KEY to your .env file."
+            "GEMINI_API_KEY is missing. Configure it in your local .env "
+            "file or Streamlit Cloud Secrets."
         )
 
     original_a = text_a
     original_b = text_b
+
     text_a = original_a[:MAX_DOCUMENT_CHARS]
     text_b = original_b[:MAX_DOCUMENT_CHARS]
 
     truncation_notes = []
+
     if len(original_a) > MAX_DOCUMENT_CHARS:
         truncation_notes.append(
             "Document A was truncated to the first 30,000 characters."
         )
+
     if len(original_b) > MAX_DOCUMENT_CHARS:
         truncation_notes.append(
             "Document B was truncated to the first 30,000 characters."
@@ -135,8 +148,9 @@ DOCUMENT B:
 
     try:
         client = genai.Client(api_key=api_key.strip())
+
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config={"response_mime_type": "application/json"},
         )
@@ -155,4 +169,5 @@ DOCUMENT B:
         ) from exc
 
     result["limitations"] = list(result["limitations"]) + truncation_notes
+
     return result
